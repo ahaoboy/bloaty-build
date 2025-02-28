@@ -37,7 +37,7 @@ jobs:
       - name: build-${{ matrix.target }}
         shell: "bash"
         run: |
-          cmake -B build -G Ninja -S .
+          cmake -B build -S .
           cmake --build build
 
           mkdir ../dist

@@ -1,0 +1,72 @@
+name: build
+
+permissions:
+  contents: write
+
+on:
+  push:
+    tags:
+      - "v*"
+    branches:
+      - "main"
+  pull_request:
+
+defaults:
+  run:
+    shell: bash --noprofile --norc -CeEuo pipefail {0}
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: x86_64-apple-darwin
+            os: macos-13
+          - target: aarch64-apple-darwin
+            os: macos-latest
+          - target: x86_64-unknown-linux-gnu
+            os: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+    name: build-${{ matrix.target }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: google/bloaty
+          submodules: recursive
+      - name: build-${{ matrix.target }}
+        shell: "bash"
+        run: |
+          cmake -B build -G Ninja -S .
+          cmake --build build
+
+          mkdir ../dist
+
+          cp -r ./build/bloaty ../dist/bloaty
+
+          cd ..
+          tar -czf ./bloaty-${{ matrix.target }}.tar.gz -C ./dist .
+          ls -l ./bloaty-${{ matrix.target }}.tar.gz
+
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: bloaty-${{ matrix.target }}
+          path: ./bloaty-${{ matrix.target }}.tar.gz
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download All Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: bloaty
+          pattern: bloaty*
+          merge-multiple: true
+
+      - name: release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: ncipollo/release-action@v1
+        with:
+          artifacts: "bloaty/*.tar.gz"

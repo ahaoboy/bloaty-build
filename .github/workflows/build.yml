@@ -10,6 +10,8 @@ on:
     branches:
       - "main"
   pull_request:
+  schedule:
+    - cron:  '0 0 * * *'
 
 defaults:
   run:
@@ -83,3 +85,5 @@ jobs:
         uses: ncipollo/release-action@v1
         with:
           artifacts: "bloaty/*.tar.gz"
+          tag: nightly
+          allowUpdates: true
